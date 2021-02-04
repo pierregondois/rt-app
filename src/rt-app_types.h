@@ -22,6 +22,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #ifndef _RTAPP_TYPES_H_
 #define _RTAPP_TYPES_H_
 
+#define _GNU_SOURCE
+#include <sched.h>
+#undef _GNU_SOURCE
+
+
+
 #include <pthread.h>
 #include <limits.h>
 #include "config.h"
