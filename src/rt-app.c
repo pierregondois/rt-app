@@ -327,9 +327,15 @@ int calibrate_cpu_cycles(int clock)
 
 }
 
+// 1ms
+// #define GRANULARITY_US (1000)
+// 100us
+#define GRANULARITY_US (200)
+
 static inline unsigned long loadwait(unsigned long exec)
 {
-	unsigned long load_count, secs, perf;
+	unsigned long load_count, msecs, perf;
+	unsigned long exec_done = 0, exec_tot = exec, loops_per_for, exec_per_for;
 	int i;
 
 	/*
@@ -343,19 +349,48 @@ static inline unsigned long loadwait(unsigned long exec)
 	 * If exec is still too big, let's run it in bursts
 	 * so that we don't overflow load_count.
 	 */
-	secs = exec / 1000000;
+	msecs = exec / GRANULARITY_US;
 
-	for (i = 0; i < secs; i++) {
-		load_count = 1000000000/p_load;
-		waste_cpu_cycles(load_count);
-		exec -= 1000000;
+	if (p_load > GRANULARITY_US) {
+		perror("pthread_join() failed");
+		exit(-1);
 	}
+
+	loops_per_for = GRANULARITY_US  * 1000 / p_load; // ns/loop
+	exec_per_for = loops_per_for * p_load / 1000;
+
+	struct timespec t_tick;
+
+	for (i = 0; i < msecs; i++) {
+		clock_gettime(CLOCK_MONOTONIC, &t_tick);
+		log_ftrace(ft_data.marker_fd, FTRACE_EVENT,
+			"rtapp_event: tick gran=%lu exec_tot=%lu exec_done=%lu ts=%lu.%lu",
+			GRANULARITY_US, exec_tot, exec_done, t_tick.tv_sec, t_tick.tv_nsec);
+	
+
+		waste_cpu_cycles(loops_per_for);
+		exec_done += exec_per_for;
+		exec -= exec_per_for;
+	}
+
+	clock_gettime(CLOCK_MONOTONIC, &t_tick);
+	log_ftrace(ft_data.marker_fd, FTRACE_EVENT,
+		"rtapp_event: tick exec_tot=%lu exec_done=%lu ts=%lu.%lu",
+			exec_tot, exec_done, t_tick.tv_sec, t_tick.tv_nsec);
 
 	/*
 	 * Run for the remainig exec (if any).
 	 */
-	load_count = (exec * 1000)/p_load;
-	waste_cpu_cycles(load_count);
+	if (exec) {
+		load_count = (exec)/p_load;
+		waste_cpu_cycles(load_count);
+		exec_done += exec;
+
+		clock_gettime(CLOCK_MONOTONIC, &t_tick);
+		log_ftrace(ft_data.marker_fd, FTRACE_EVENT,
+			"rtapp_event: tick exec_tot=%lu exec_done=%lu ts=%lu.%lu",
+				exec_tot, exec_done, t_tick.tv_sec, t_tick.tv_nsec);
+	}
 
 	return perf;
 }

@@ -1,18 +1,18 @@
 {
 	/*
-	 * Simple use case which creates a thread that run 2ms then sleep 8ms
-	 * until the use case is stopped with Ctrl+C
+	 * Simple use case which creates a thread that run 20ms then sleep 80ms
+	 * until the use case is stopped with Ctrl+C // false
 	 */
 	"tasks" : {
 		"thread0" : {
 			"loop" : -1,
-			"run" :   20000,
-			"sleep" : 80000
+			"run" :   2000,
+			"sleep" : 16000
 		}
 	},
 	"global" : {
 		"duration" : 2,
-		"calibration" : "CPU0",
+		"calibration" : 42,
 		"default_policy" : "SCHED_OTHER",
 		"pi_enabled" : false,
 		"lock_pages" : false,
